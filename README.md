@@ -79,6 +79,7 @@ php artisan serve
 ## Catatan
 
 - Pastikan `services.xendit.secret_key` dan `services.xendit.webhook_token` sudah diatur di `.env` jika menggunakan Xendit.
+- Untuk notifikasi WhatsApp otomatis saat DP diterima, atur juga `WHATSAPP_API_URL` dan `WHATSAPP_API_TOKEN` di `.env`.
 - Jika hanya ingin tes lokal tanpa Xendit, kamu bisa gunakan mode cash atau dummy invoice.
 
 ## Lisensi

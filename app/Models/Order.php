@@ -4,6 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -74,7 +75,15 @@ class Order extends Model
     public static function generateOrderNumber(): string {
         $date   = now()->format('Ymd');
         $prefix = "RC-{$date}-";
-        $last   = self::where('order_number','like', $prefix.'%')->count();
-        return $prefix . str_pad($last + 1, 4, '0', STR_PAD_LEFT);
+        $last   = self::where('order_number', 'like', $prefix.'%')
+            ->orderBy('order_number', 'desc')
+            ->value('order_number');
+
+        if (! $last) {
+            return $prefix . '0001';
+        }
+
+        $lastSequence = intval(substr($last, strlen($prefix)));
+        return $prefix . str_pad($lastSequence + 1, 4, '0', STR_PAD_LEFT);
     }
 }

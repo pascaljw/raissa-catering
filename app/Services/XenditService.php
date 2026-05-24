@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,7 +13,7 @@ class XenditService
     protected string $secretKey;
     protected string $baseUrl = 'https://api.xendit.co';
 
-    public function __construct()
+    public function __construct(protected WhatsAppService $whatsapp)
     {
         // 1. Ambil nilai dari config atau .env secara dinamis
         $this->secretKey = config('services.xendit.secret_key') ?? env('XENDIT_SECRET_KEY') ?? '';
@@ -77,6 +78,9 @@ class XenditService
                 'xendit_response'   => $data,
             ]);
             $order->update(['payment_status' => 'dp_pending']);
+
+            // Send WhatsApp notification when DP invoice is created (payment_status = dp_pending)
+            $this->sendDpPendingNotification($order, $data['invoice_url']);
 
             return ['success' => true, 'invoice_url' => $data['invoice_url'], 'payment' => $payment];
         }
@@ -234,13 +238,63 @@ class XenditService
         };
     }
 
+    /**
+     * Send WhatsApp notification when DP invoice is created (payment_status = dp_pending)
+     */
+    private function sendDpPendingNotification(Order $order, string $invoiceUrl): void
+    {
+        $message = "Halo {$order->contact_name},\n" .
+            "Pesanan Anda telah berhasil dibuat dan menunggu pembayaran DP 50%.\n\n" .
+            "Detail Pesanan:\n" .
+            "- Nomor Order: {$order->order_number}\n" .
+            "- Paket: {$order->package->name}\n" .
+            "- Jumlah: {$order->quantity} kotak\n" .
+            "- Tanggal Acara: {$order->event_date?->format('d-m-Y')}\n" .
+            "- Total DP: Rp " . number_format($order->dp_amount, 0, ',', '.') . "\n\n" .
+            "Silakan selesaikan pembayaran melalui:\n{$invoiceUrl}\n\n" .
+            "Terima kasih!";
+
+        $sent = $this->whatsapp->sendTextMessage($order->contact_phone, $message);
+        if (!$sent) {
+            Log::warning("WhatsApp DP pending notification failed for order {$order->order_number}");
+        }
+    }
+
     private function notifyDpPaid(Order $order): void
     {
         Log::info("DP paid for order {$order->order_number}");
+
+        $message = "Halo {$order->contact_name},\n" .
+            "Terima kasih, DP pesanan Anda telah diterima.\n\n" .
+            "Detail Pesanan:\n" .
+            "- Nomor Order: {$order->order_number}\n" .
+            "- Paket: {$order->package->name}\n" .
+            "- Jumlah: {$order->quantity} kotak\n" .
+            "- Tanggal Acara: {$order->event_date?->format('d-m-Y')}\n\n" .
+            "Kami akan segera memproses pesanan Anda.";
+
+        $sent = $this->whatsapp->sendTextMessage($order->contact_phone, $message);
+        if (!$sent) {
+            Log::warning("WhatsApp DP paid notification failed for order {$order->order_number}");
+        }
     }
 
     private function notifyFullyPaid(Order $order): void
     {
         Log::info("Fully paid for order {$order->order_number}");
+
+        $message = "Halo {$order->contact_name},\n" .
+            "Pembayaran pelunasan Anda telah diterima.\n\n" .
+            "Detail Pesanan:\n" .
+            "- Nomor Order: {$order->order_number}\n" .
+            "- Paket: {$order->package->name}\n" .
+            "- Jumlah: {$order->quantity} kotak\n" .
+            "- Tanggal Acara: {$order->event_date?->format('d-m-Y')}\n\n" .
+            "Terima kasih telah mempercayakan acara Anda kepada Raissa Catering.";
+
+        $sent = $this->whatsapp->sendTextMessage($order->contact_phone, $message);
+        if (!$sent) {
+            Log::warning("WhatsApp fully paid notification failed for order {$order->order_number}");
+        }
     }
 }

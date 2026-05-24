@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Package;
 use App\Services\XenditService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -80,29 +81,51 @@ class OrderController extends Controller
         $dpAmount    = $total * 0.5;
         $remaining   = $total - $dpAmount;
 
-        $order = Order::create([
-            'order_number'    => Order::generateOrderNumber(),
-            'user_id'         => Auth::id(),
-            'package_id'      => $package->id,
-            'quantity'        => $request->quantity,
-            'price_per_box'   => $package->price_per_box,
-            'subtotal'        => $subtotal,
-            'addon_total'     => $addonTotal,
-            'total_amount'    => $total,
-            'dp_amount'       => $dpAmount,
-            'remaining_amount'=> $remaining,
-            'event_name'      => $request->input('event_name', 'Pesanan Katering ' . $package->name),
-            'event_location'  => $request->input('event_location', 'Lokasi Pengantaran'),
-            'event_address'   => $request->address,
-            'event_date'      => $request->delivery_date,
-            'delivery_time'   => $request->delivery_time,
-            'contact_name'    => $request->contact_name,
-            'contact_phone'   => $request->contact_phone,
-            'notes'           => $request->notes,
-            'selected_addons' => $selectedAddons,
-            'status'          => 'pending',
-            'payment_status'  => 'unpaid',
-        ]);
+        $orderNumber = Order::generateOrderNumber();
+        $attempts = 0;
+        $order = null;
+
+        while ($attempts < 5) {
+            try {
+                $order = Order::create([
+                    'order_number'    => $orderNumber,
+                    'user_id'         => Auth::id(),
+                    'package_id'      => $package->id,
+                    'quantity'        => $request->quantity,
+                    'price_per_box'   => $package->price_per_box,
+                    'subtotal'        => $subtotal,
+                    'addon_total'     => $addonTotal,
+                    'total_amount'    => $total,
+                    'dp_amount'       => $dpAmount,
+                    'remaining_amount'=> $remaining,
+                    'event_name'      => $request->input('event_name', 'Pesanan Katering ' . $package->name),
+                    'event_location'  => $request->input('event_location', 'Lokasi Pengantaran'),
+                    'event_address'   => $request->address,
+                    'event_date'      => $request->delivery_date,
+                    'delivery_time'   => $request->delivery_time,
+                    'contact_name'    => $request->contact_name,
+                    'contact_phone'   => $request->contact_phone,
+                    'notes'           => $request->notes,
+                    'selected_addons' => $selectedAddons,
+                    'status'          => 'pending',
+                    'payment_status'  => 'unpaid',
+                ]);
+
+                break;
+            } catch (QueryException $e) {
+                if ($e->errorInfo[1] === 1062 && str_contains($e->getMessage(), 'orders_order_number_unique')) {
+                    $orderNumber = Order::generateOrderNumber();
+                    $attempts++;
+                    continue;
+                }
+
+                throw $e;
+            }
+        }
+
+        if (! $order) {
+            return back()->withErrors(['order' => 'Gagal membuat pesanan. Silakan coba lagi.']);
+        }
 
         return redirect()->route('customer.orders.show', $order->order_number);
     }
