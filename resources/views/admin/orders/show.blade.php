@@ -7,7 +7,7 @@
     {{-- Breadcrumb & Header --}}
     <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <a href="{{ route('admin.orders.index') }}" class="text-sm font-medium text-orange-600 hover:underline">← Kembali ke Daftar Pesanan</a>
+            <a href="{{ route('admin.orders.index') }}" class="no-print text-sm font-medium text-orange-600 hover:underline">← Kembali ke Daftar Pesanan</a>
             <div class="flex items-center gap-3 mt-1">
                 <h1 class="text-2xl font-bold text-gray-900">Pesanan #{{ $order->order_number }}</h1>
                 <span class="px-3 py-1 rounded-full text-xs font-semibold uppercase border
@@ -30,7 +30,7 @@
         
         {{-- Tombol Cetak / Aksi Cepat --}}
         <div class="flex items-center gap-2">
-            <button onclick="window.print()" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-1.5">
+            <button onclick="window.print()" class="no-print px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-1.5">
                 🖨️ Cetak Nota
             </button>
         </div>
@@ -38,12 +38,12 @@
 
     {{-- Notifikasi Error / Sukses Sistem --}}
     @if(session('success'))
-        <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl text-sm font-medium">
+        <div class="no-print mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl text-sm font-medium">
             ✓ {{ session('success') }}
         </div>
     @endif
     @if($errors->any())
-        <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm font-medium">
+        <div class="no-print mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm font-medium">
             ⚠️ {{ $errors->first() }}
         </div>
     @endif
@@ -69,6 +69,12 @@
                                 + {{ $addon['name'] }} (Rp {{ number_format($addon['price'], 0, ',', '.') }})
                             </span>
                             @endforeach
+                        </div>
+                        @endif
+                        @if($order->is_custom && $order->custom_request)
+                        <div class="mt-4 bg-orange-50 border border-orange-100 rounded-2xl p-4 text-sm text-orange-800">
+                            <p class="font-semibold mb-2">🔧 Permintaan Paket Custom</p>
+                            <p>{{ $order->custom_request }}</p>
                         </div>
                         @endif
                     </div>
@@ -131,13 +137,14 @@
         <div class="space-y-6">
             
             {{-- Form Update Status Manajemen Dapur/Kurir --}}
-            <div class="bg-white rounded-xl border border-gray-200/60 shadow-sm p-6">
+            <div class="bg-white rounded-xl border border-gray-200/60 shadow-sm p-6 no-print">
                 <h2 class="text-base font-bold text-gray-900 mb-3 pb-1">⚙️ Update Status Alur Pesanan</h2>
+                @php $isFinalStatus = in_array($order->status, ['completed', 'cancelled']); @endphp
                 <form action="{{ route('admin.orders.status', $order->id) }}" method="POST" class="space-y-3">
                     @csrf
                     @method('PATCH')
                     <div>
-                        <select name="status" class="w-full text-sm border-gray-200 rounded-lg shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                        <select name="status" {{ $isFinalStatus ? 'disabled' : '' }} class="w-full text-sm border-gray-200 rounded-lg shadow-sm focus:border-orange-500 focus:ring-orange-500 {{ $isFinalStatus ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : '' }}">
                             <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>Menunggu Pembayaran</option>
                             <option value="processing" {{ $order->status == 'processing' || $order->status == 'dp_paid' ? 'selected' : '' }}>Diproses (Dapur Produksi)</option>
                             <option value="delivering" {{ $order->status == 'delivering' ? 'selected' : '' }}>Kurir Sedang Mengantar</option>
@@ -145,9 +152,12 @@
                             <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>Batal / Gagal</option>
                         </select>
                     </div>
-                    <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
+                    <button type="submit" {{ $isFinalStatus ? 'disabled' : '' }} class="w-full {{ $isFinalStatus ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white' }} font-semibold py-2 rounded-lg text-sm transition-colors shadow-sm">
                         Simpan Perubahan Status
                     </button>
+                    @if($isFinalStatus)
+                    <p class="text-xs text-gray-500">Status pesanan sudah final, tidak dapat diubah lagi.</p>
+                    @endif
                 </form>
             </div>
 
@@ -179,7 +189,7 @@
 
                 {{-- KONTROL PELUNASAN TUNAI (COD) OLEH ADMIN --}}
                 @if($order->payment_status !== 'fully_paid')
-                <div class="mt-5 pt-4 border-t border-gray-100">
+                <div class="mt-5 pt-4 border-t border-gray-100 no-print">
                     <p class="text-xs text-gray-500 mb-2 leading-relaxed">Jika kurir menerima uang pelunasan secara tunai (cash) di lokasi acara, konfirmasi di bawah ini:</p>
                     <form action="{{ route('admin.orders.confirm-cash', $order->id) }}" method="POST" onsubmit="return confirm('Konfirmasi bahwa pesanan katering ini telah dilunasi secara tunai (Cash)?')">
                         @csrf

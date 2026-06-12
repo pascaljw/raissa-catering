@@ -51,6 +51,10 @@ class OrderController extends Controller
      */
     public function updateStatus(Request $request, Order $order)
     {
+        if (in_array($order->status, ['completed', 'cancelled'])) {
+            return back()->withErrors(['status' => 'Status pesanan sudah final dan tidak dapat diubah lagi.']);
+        }
+
         $request->validate([
             'status' => 'required|in:pending,dp_paid,confirmed,processing,delivering,delivered,completed,cancelled',
         ]);

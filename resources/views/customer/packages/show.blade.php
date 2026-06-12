@@ -80,9 +80,14 @@
 
             {{-- Tombol Aksi Pesan Sekarang --}}
             <div class="border-t border-gray-100 pt-5 mt-auto">
-                <a href="{{ route('customer.checkout', $package->slug) }}" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-6 rounded-xl transition-all text-center block shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                    🛒 Pesan Paket Sekarang
-                </a>
+                <div class="grid gap-3">
+                    <a href="{{ route('customer.checkout', $package->slug) }}" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 px-6 rounded-xl transition-all text-center block shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        🛒 Pesan Paket Sekarang
+                    </a>
+                    <a href="{{ route('customer.checkout', ['package' => $package->slug, 'custom' => 1]) }}" class="w-full bg-white text-primary border border-primary/20 font-semibold py-3.5 px-6 rounded-xl transition-all text-center block hover:bg-primary/5 shadow-sm">
+                        🔧 Permintaan Custom
+                    </a>
+                </div>
                 <p class="text-[11px] text-gray-400 text-center mt-2.5">
                     *Uang muka (DP) sebesar 50% akan dihitung otomatis di halaman checkout via payment gateway Xendit.
                 </p>

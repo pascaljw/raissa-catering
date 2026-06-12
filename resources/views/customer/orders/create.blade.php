@@ -71,11 +71,27 @@
                                   required></textarea>
                     </div>
 
+                    @if(request()->boolean('custom'))
+                    <div class="bg-orange-50 border border-orange-100 rounded-2xl p-4">
+                        <label for="custom_request" class="block text-sm font-semibold text-orange-700 mb-1.5">Permintaan Paket Custom</label>
+                        <textarea name="custom_request" id="custom_request" rows="3"
+                                  placeholder="Contoh: Saya ingin menu prasmanan nasi liwet, ayam rica-rica, sayur asem, dan sambal matah."
+                                  class="w-full px-4 py-3 rounded-xl border border-orange-200 bg-white focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none text-sm transition-all">{{ old('custom_request') }}</textarea>
+                        <p class="text-xs text-orange-500 mt-2">Isi jika Anda ingin paket disesuaikan dengan kebutuhan menu acara.</p>
+                    </div>
+                    @endif
+
+                    @if(request()->boolean('custom'))
+                    <div class="mb-6">
+                        <x-pos-custom-menu :base-price="$package->price_per_box" :lauk-items="$laukItems" :drink-items="$drinkItems" :fruit-items="$fruitItems" />
+                    </div>
+                    @endif
+
                     <div>
                         <label for="notes" class="block text-sm font-semibold text-gray-700 mb-1.5">Catatan Khusus Tambahan (Opsional)</label>
                         <textarea name="notes" id="notes" rows="2" 
                                   placeholder="Contoh: Sambal dipisah, sendok plastik tidak perlu disediakan, dsb."
-                                  class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none text-sm transition-all"></textarea>
+                                  class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none text-sm transition-all">{{ old('notes') }}</textarea>
                     </div>
 
                     <div class="pt-2">

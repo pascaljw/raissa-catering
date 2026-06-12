@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -14,6 +15,7 @@ class Order extends Model
         'dp_amount','remaining_amount','event_name','event_location',
         'event_address','event_date','delivery_time','notes','status',
         'payment_status','selected_addons','contact_name','contact_phone',
+        'is_custom','custom_request',
     ];
 
     protected $casts = [
@@ -23,12 +25,14 @@ class Order extends Model
         'total_amount'    => 'decimal:2',
         'dp_amount'       => 'decimal:2',
         'remaining_amount'=> 'decimal:2',
+        'is_custom'       => 'boolean',
     ];
 
     // Relasi
     public function user(): BelongsTo    { return $this->belongsTo(User::class); }
     public function package(): BelongsTo { return $this->belongsTo(Package::class); }
     public function payments(): HasMany  { return $this->hasMany(Payment::class); }
+    public function lineItems(): HasMany { return $this->hasMany(OrderLineItem::class); }
     public function review(): HasOne     { return $this->hasOne(Review::class); }
 
     // Helpers

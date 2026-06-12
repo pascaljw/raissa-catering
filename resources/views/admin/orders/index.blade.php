@@ -42,7 +42,12 @@
                         <p class="text-xs text-gray-400">{{ $order->contact_phone }}</p>
                     </td>
                     <td class="px-4 py-3">
-                        <p>{{ $order->package->name }}</p>
+                        <p class="flex items-center gap-2">
+                            {{ $order->package->name }}
+                            @if($order->is_custom)
+                                <span class="text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">Custom</span>
+                            @endif
+                        </p>
                         <p class="text-xs text-gray-400">{{ $order->quantity }} kotak</p>
                     </td>
                     <td class="px-4 py-3">

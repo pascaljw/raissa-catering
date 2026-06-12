@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Models\Item;
 use App\Models\Order;
+use App\Models\OrderLineItem;
 use App\Models\Package;
 use App\Services\XenditService;
 use Illuminate\Database\QueryException;
@@ -39,25 +41,50 @@ class OrderController extends Controller
     // GET /checkout/{slug} - Form pemesanan katering
     public function checkout(Package $package)
     {
-        $blockedDates = collect([]); 
-        $bookedDates  = collect([]); 
+        $blockedDates = collect([]);
+        $bookedDates  = collect([]);
 
-        return view('customer.orders.create', compact('package', 'blockedDates', 'bookedDates'));
+        $items = $package->items()->get();
+        $laukItems = $items->where('category', 'lauk')->map(fn($item) => [
+            'id' => $item->id,
+            'name' => $item->name,
+            'additional_price' => $item->additional_price,
+            'description' => $item->description,
+        ])->values();
+
+        $drinkItems = $items->where('category', 'minuman')->map(fn($item) => [
+            'id' => $item->id,
+            'name' => $item->name,
+            'additional_price' => $item->additional_price,
+            'description' => $item->description,
+        ])->values();
+
+        $fruitItems = $items->where('category', 'buah')->map(fn($item) => [
+            'id' => $item->id,
+            'name' => $item->name,
+            'additional_price' => $item->additional_price,
+            'description' => $item->description,
+        ])->values();
+
+        return view('customer.orders.create', compact('package', 'blockedDates', 'bookedDates', 'laukItems', 'drinkItems', 'fruitItems'));
     }
 
     // POST /orders - Simpan pesanan baru ke database
     public function store(Request $request)
     {
         $request->validate([
-            'package_id'    => 'required|exists:packages,id',
-            'quantity'      => 'required|integer|min:1',
-            'delivery_date' => 'required|date|after:today',
-            'delivery_time' => 'required|date_format:H:i',
-            'contact_name'  => 'required|string|max:255',
-            'contact_phone' => 'required|string|max:20',
-            'address'       => 'required|string',
-            'notes'         => 'nullable|string',
-            'selected_addons'=> 'nullable|array',
+            'package_id'      => 'required|exists:packages,id',
+            'quantity'        => 'required|integer|min:1',
+            'delivery_date'   => 'required|date|after:today',
+            'delivery_time'   => 'required|date_format:H:i',
+            'contact_name'    => 'required|string|max:255',
+            'contact_phone'   => 'required|string|max:20',
+            'address'         => 'required|string',
+            'notes'           => 'nullable|string',
+            'custom_request'  => 'nullable|string|max:1000',
+            'selected_items'  => 'nullable|array',
+            'selected_items.*' => 'integer|exists:items,id',
+            'selected_addons' => 'nullable|array',
         ]);
 
         $package = Package::findOrFail($request->package_id);
@@ -76,8 +103,41 @@ class OrderController extends Controller
             }
         }
 
+        $itemTotal = 0;
+        $selectedItems = [];
+        $selectedItemIds = collect($request->input('selected_items', []))->filter()->values();
+
+        if ($selectedItemIds->isNotEmpty()) {
+            $availableItemIds = $package->items()->pluck('id');
+            if ($selectedItemIds->diff($availableItemIds)->isNotEmpty()) {
+                return back()->withErrors(['selected_items' => 'Item terpilih tidak tersedia untuk paket ini.'])->withInput();
+            }
+
+            $items = Item::whereIn('id', $selectedItemIds)->get()->keyBy('id');
+            foreach ($selectedItemIds as $itemId) {
+                $item = $items->get($itemId);
+                if (! $item) {
+                    continue;
+                }
+
+                $quantity = 1;
+                $lineTotal = $item->additional_price * $quantity;
+                $itemTotal += $lineTotal;
+
+                $selectedItems[] = [
+                    'item_id'          => $item->id,
+                    'item_name'        => $item->name,
+                    'category'         => $item->category,
+                    'quantity'         => $quantity,
+                    'unit_price'       => $item->additional_price,
+                    'additional_price' => $lineTotal,
+                    'total_price'      => $lineTotal,
+                ];
+            }
+        }
+
         $subtotal    = $package->price_per_box * $request->quantity;
-        $total       = $subtotal + $addonTotal;
+        $total       = $subtotal + $addonTotal + $itemTotal;
         $dpAmount    = $total * 0.5;
         $remaining   = $total - $dpAmount;
 
@@ -106,10 +166,21 @@ class OrderController extends Controller
                     'contact_name'    => $request->contact_name,
                     'contact_phone'   => $request->contact_phone,
                     'notes'           => $request->notes,
+                    'custom_request'  => $request->custom_request,
+                    'is_custom'       => filled($request->custom_request) || ! empty($selectedItems),
                     'selected_addons' => $selectedAddons,
                     'status'          => 'pending',
                     'payment_status'  => 'unpaid',
                 ]);
+
+                if (! empty($selectedItems)) {
+                    foreach ($selectedItems as $selectedItem) {
+                        OrderLineItem::create(array_merge($selectedItem, [
+                            'order_id'   => $order->id,
+                            'package_id' => $package->id,
+                        ]));
+                    }
+                }
 
                 break;
             } catch (QueryException $e) {
