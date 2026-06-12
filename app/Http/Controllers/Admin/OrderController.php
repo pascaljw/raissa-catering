@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\OrdersExport;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\XenditService;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class OrderController extends Controller
 {
@@ -148,65 +150,7 @@ class OrderController extends Controller
      */
     public function exportExcel()
     {
-        $fileName = 'Laporan_Katering_Raissa_' . date('Y-m-d_H-i-s') . '.csv';
-        
-        $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $orders = Order::with(['package', 'user'])->latest()->get();
-
-        $callback = function() use($orders) {
-            $file = fopen('php://output', 'w');
-            
-            // 1. Masukkan UTF-8 BOM agar karakter khusus terbaca normal
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-
-            // 2. FAIL-SAFE EXCEL INDONESIA/INGGRIS: Paksa Excel mengenali pembatas titik koma (;)
-            fwrite($file, "sep=;\n");
-
-            // 3. Tulis Baris Judul Kolom (Header)
-            fputcsv($file, [
-                'ID Order', 
-                'Tanggal Acara', 
-                'Nama Pelanggan', 
-                'Nomor Telepon', 
-                'Paket Menu Katering', 
-                'Jumlah (Box)', 
-                'Total Tagihan (Rp)', 
-                'Status Pembayaran', 
-                'Status Operasional'
-            ], ';'); 
-
-            // 4. Loop Mengisi Baris Data Transaksi
-            foreach ($orders as $order) {
-                $paymentStatus = match($order->payment_status) {
-                    'fully_paid' => 'Lunas Total',
-                    'dp_paid'    => 'DP Lunas',
-                    default      => 'Belum Bayar',
-                };
-
-                fputcsv($file, [
-                    '#' . $order->order_number,
-                    $order->event_date ? \Carbon\Carbon::parse($order->event_date)->format('d-m-Y') : '-',
-                    $order->contact_name ?? ($order->user->name ?? '-'),
-                    $order->contact_phone ?? '-',
-                    $order->package->name ?? 'Paket Kustom',
-                    $order->quantity, // Mengirim angka murni tanpa teks 'Box' agar bisa di-SUM/hitung di Excel
-                    $order->total_amount, // Mengirim angka murni tanpa 'Rp' agar bisa diformat currency otomatis oleh Excel
-                    $paymentStatus,
-                    strtoupper($order->status)
-                ], ';');
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return Excel::download(new OrdersExport(), 'Laporan_Katering_Raissa_' . date('Y-m-d_H-i-s') . '.xlsx');
     }
 
     /**
