@@ -137,5 +137,8 @@ class DatabaseSeeder extends Seeder
             'is_active'  => true,
             'sort_order' => 3,
         ]);
+
+        // Call Custom Menu Seeder
+        $this->call(CustomMenuSeeder::class);
     }
 }

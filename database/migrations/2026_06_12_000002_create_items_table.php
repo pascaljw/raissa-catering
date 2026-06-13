@@ -9,7 +9,7 @@ return new class extends Migration {
         Schema::create('items', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('category', ['lauk', 'minuman', 'buah']);
+            $table->enum('category', ['lauk', 'minuman', 'buah', 'protein', 'vegetable', 'soup', 'condiment', 'dessert', 'beverage']);
             $table->decimal('additional_price', 10, 2)->default(0);
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
