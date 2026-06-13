@@ -172,7 +172,7 @@
         <p class="text-white/80 text-lg mb-8">Pesan sekarang dan dapatkan catering berkualitas untuk acara Anda. Pembayaran mudah, pengiriman tepat waktu.</p>
         <div class="flex gap-4 justify-center flex-wrap">
             <a href="{{ route('packages.index') }}" class="bg-white text-primary font-bold px-8 py-4 rounded-lg hover:bg-cream transition-all duration-200 shadow-md transform hover:-translate-y-0.5">Pesan Sekarang</a>
-            <a href="https://wa.me/628xxx" class="border-2 border-white text-white font-bold px-8 py-4 rounded-lg hover:bg-white/10 transition-all duration-200 transform hover:-translate-y-0.5">Tanya via WhatsApp</a>
+            <a href="https://wa.me/6285179860754" class="border-2 border-white text-white font-bold px-8 py-4 rounded-lg hover:bg-white/10 transition-all duration-200 transform hover:-translate-y-0.5">Tanya via WhatsApp</a>
         </div>
     </div>
 </section>

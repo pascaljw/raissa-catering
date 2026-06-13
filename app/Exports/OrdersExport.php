@@ -35,6 +35,7 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithSty
             'Paket Menu Katering',
             'Jumlah (Box)',
             'Total Tagihan (Rp)',
+            'Total Pendapatan (Rp)',
             'Status Pembayaran',
             'Status Operasional'
         ];
@@ -51,6 +52,8 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithSty
             default      => 'Belum Bayar',
         };
 
+        $revenue = $order->payments->where('status', 'paid')->sum('amount');
+
         return [
             '#' . $order->order_number,
             $order->event_date ? \Carbon\Carbon::parse($order->event_date)->format('d-m-Y') : '-',
@@ -59,6 +62,7 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithSty
             $order->package->name ?? 'Paket Kustom',
             $order->quantity,
             $order->total_amount,
+            $revenue,
             $paymentStatus,
             strtoupper($order->status)
         ];
@@ -72,6 +76,7 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithSty
         return [
             'F' => NumberFormat::FORMAT_NUMBER,
             'G' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
         ];
     }
 
