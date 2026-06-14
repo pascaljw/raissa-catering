@@ -17,6 +17,9 @@
             <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm h-fit">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 border-gray-100">Detail Pengiriman</h2>
                 
+                {{-- Order Form Validator Component --}}
+                <x-order-form-validator />
+                
                 <form action="{{ route('customer.orders.store') }}" method="POST" class="space-y-5">
                     @csrf
                     <input type="hidden" name="package_id" value="{{ $package->id }}">
@@ -139,4 +142,7 @@
         
     </div>
 </div>
+
+{{-- Include Order Form Validator Script --}}
+@vite(['resources/js/order-form-validator.js'])
 @endsection
