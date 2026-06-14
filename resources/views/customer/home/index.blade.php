@@ -36,17 +36,25 @@
 
             {{-- Stats --}}
             <div class="mt-10 flex gap-8">
-                <div><p class="font-display text-3xl font-bold text-primary">500+</p><p class="text-sm text-gray-500">Acara Dilayani</p></div>
-                <div><p class="font-display text-3xl font-bold text-primary">98%</p><p class="text-sm text-gray-500">Pelanggan Puas</p></div>
-                <div><p class="font-display text-3xl font-bold text-primary">5★</p><p class="text-sm text-gray-500">Rating Rata-rata</p></div>
+                <div>
+                    <p class="font-display text-3xl font-bold text-primary">500+</p>
+                    <p class="text-sm text-gray-500">Acara Dilayani</p>
+                </div>
+                <div>
+                    <p id="review-count-value" class="font-display text-3xl font-bold text-primary">{{ $reviewCount }}</p>
+                    <p class="text-sm text-gray-500">Review Terverifikasi</p>
+                </div>
+                <div>
+                    <p id="average-rating-value" class="font-display text-3xl font-bold text-primary">{{ number_format($averageRating, 1) }}★</p>
+                    <p class="text-sm text-gray-500">Rating Rata-rata</p>
+                </div>
             </div>
         </div>
         
         {{-- Animasi: Masuk bergeser dari kanan --}}
         <div class="relative" data-aos="fade-left" data-aos-duration="1000" data-aos-delay="200">
-            <div class="w-full h-80 bg-primary/10 rounded-3xl flex items-center justify-center shadow-md">
-                <img src="{{ asset('images/hero-food.jpg') }}" alt="Raissa Catering" class="w-full h-full object-cover rounded-3xl" onerror="this.style.display='none'">
-                <span class="text-primary/30 text-8xl absolute">🍱</span>
+            <div class="w-full h-80 bg-primary/10 rounded-3xl flex items-center justify-center shadow-md overflow-hidden">
+                <img src="{{ asset('images/raissa-catering.png') }}" alt="Raissa Catering" class="max-h-[70%] max-w-[80%] object-contain" />
             </div>
         </div>
     </div>
@@ -131,7 +139,6 @@
 </section>
 
 {{-- Testimoni --}}
-@if($reviews->count())
 <section id="kontak" class="py-16 bg-white overflow-hidden">
     <div class="max-w-7xl mx-auto px-4">
         <div class="text-center mb-12" data-aos="fade-up" data-aos-duration="800">
@@ -139,8 +146,8 @@
             <p class="text-gray-500">Kepuasan pelanggan adalah prioritas utama kami</p>
         </div>
         
-        <div class="grid md:grid-cols-3 gap-6">
-            @foreach($reviews as $index => $review)
+        <div id="review-cards" class="grid md:grid-cols-3 gap-6">
+            @forelse($reviews as $index => $review)
             <div class="bg-cream p-6 rounded-2xl shadow-sm border border-gray-100"
                  data-aos="zoom-in-up"
                  data-aos-duration="700"
@@ -159,11 +166,16 @@
                     </div>
                 </div>
             </div>
-            @endforeach
+            @empty
+            <div class="md:col-span-3 rounded-3xl border border-dashed border-gray-200 bg-cream/80 p-10 text-center text-gray-500">
+                <p class="text-2xl">⭐</p>
+                <p class="mt-4 text-lg font-semibold text-charcoal">Belum ada ulasan pelanggan.</p>
+                <p class="mt-2 text-sm">Tetapi review terbaru akan muncul di sini secara otomatis saat pelanggan memberikan rating.</p>
+            </div>
+            @endforelse
         </div>
     </div>
 </section>
-@endif
 
 {{-- CTA --}}
 <section class="py-16 bg-primary overflow-hidden">
@@ -188,6 +200,59 @@
             mirror: false,   // Menonaktifkan animasi ulang saat elemen di-scroll ke atas kembali
             offset: 120,     // Jarak picu awal animasi dari tepi bawah layar browser (dalam piksel)
         });
+
+        const summaryUrl = "{{ route('reviews.summary') }}";
+        const averageRatingEl = document.getElementById('average-rating-value');
+        const reviewCountEl = document.getElementById('review-count-value');
+        const reviewCardsEl = document.getElementById('review-cards');
+
+        const renderStars = rating => '⭐'.repeat(Math.round(rating));
+        const escapeHtml = value => String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/`/g, '&#96;');
+
+        const refreshReviewSummary = async () => {
+            try {
+                const response = await fetch(summaryUrl, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) return;
+
+                const data = await response.json();
+                if (averageRatingEl) {
+                    averageRatingEl.textContent = `${parseFloat(data.average_rating).toFixed(1)}★`;
+                }
+                if (reviewCountEl) {
+                    reviewCountEl.textContent = data.review_count;
+                }
+
+                if (reviewCardsEl && Array.isArray(data.reviews)) {
+                    reviewCardsEl.innerHTML = data.reviews.map((review, index) => {
+                        const comment = review.comment ? escapeHtml(review.comment) : '—';
+                        const userName = escapeHtml(review.user_name);
+                        const packageName = escapeHtml(review.package);
+
+                        return `
+                            <div class="bg-cream p-6 rounded-2xl shadow-sm border border-gray-100" data-aos="zoom-in-up" data-aos-duration="700" data-aos-delay="${index * 100}">
+                                <div class="flex text-yellow-400 mb-3">${renderStars(review.rating)}</div>
+                                <p class="text-gray-600 text-sm mb-4 italic">"${comment}"</p>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold shadow-sm">${userName.charAt(0) || 'U'}</div>
+                                    <div>
+                                        <p class="font-semibold text-charcoal text-sm">${userName}</p>
+                                        <p class="text-xs text-gray-400">${packageName}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    if (window.AOS) {
+                        AOS.refresh();
+                    }
+                }
+            } catch (error) {
+                console.warn('Gagal memuat ringkasan review:', error);
+            }
+        };
+
+        refreshReviewSummary();
+        setInterval(refreshReviewSummary, 15000);
     });
 </script>
 

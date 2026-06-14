@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderLineItem;
 use App\Models\Package;
 use App\Services\XenditService;
+use App\Models\Review;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,6 +37,33 @@ class OrderController extends Controller
         $reviews = $package->reviews()->where('is_approved', true)
             ->with('user')->latest()->take(5)->get();
         return view('customer.packages.show', compact('package', 'reviews'));
+    }
+
+    public function reviewSummary()
+    {
+        $approvedReviews = Review::where('is_approved', true)
+            ->with('user', 'package')
+            ->latest()
+            ->take(3)
+            ->get();
+
+        $averageRating = Review::where('is_approved', true)->avg('rating') ?: 0;
+        $reviewCount = Review::where('is_approved', true)->count();
+
+        return response()->json([
+            'average_rating' => round($averageRating, 1),
+            'review_count'  => $reviewCount,
+            'reviews'       => $approvedReviews->map(function ($review) {
+                return [
+                    'id'         => $review->id,
+                    'rating'     => $review->rating,
+                    'comment'    => $review->comment,
+                    'user_name'  => $review->user->name,
+                    'package'    => $review->package->name ?? null,
+                    'created_at' => $review->created_at->format('d M Y'),
+                ];
+            }),
+        ]);
     }
 
     // GET /checkout/{slug} - Form pemesanan katering
@@ -215,10 +243,55 @@ class OrderController extends Controller
     {
         $order = Order::where('order_number', $orderNumber)
             ->where('user_id', Auth::id())
-            ->with('package', 'payments')
+            ->with('package', 'payments', 'review')
             ->firstOrFail();
             
         return view('customer.orders.show', compact('order'));
+    }
+
+    public function review(string $orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', Auth::id())
+            ->where('status', 'completed')
+            ->with('package', 'review')
+            ->firstOrFail();
+
+        if ($order->review) {
+            return redirect()->route('customer.orders.show', $order->order_number)->with('status', 'Anda sudah mengirimkan review untuk pesanan ini.');
+        }
+
+        return view('customer.orders.review', compact('order'));
+    }
+
+    public function submitReview(Request $request, string $orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', Auth::id())
+            ->where('status', 'completed')
+            ->with('package', 'review')
+            ->firstOrFail();
+
+        if ($order->review) {
+            return redirect()->route('customer.orders.show', $order->order_number)->with('status', 'Review sudah dikirim.');
+        }
+
+        $request->validate([
+            'rating'  => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000',
+        ]);
+
+        Review::create([
+            'user_id'    => Auth::id(),
+            'order_id'   => $order->id,
+            'package_id' => $order->package_id,
+            'rating'     => $request->rating,
+            'comment'    => $request->comment,
+            'event_type' => $order->package->event_type,
+            'is_approved'=> true,
+        ]);
+
+        return redirect()->route('customer.orders.show', $order->order_number)->with('success', 'Terima kasih! Review Anda sudah terekam.');
     }
 
     // POST /orders/{orderNumber}/pay-dp - Integrasi Pembayaran Ke Link Invoice Xendit

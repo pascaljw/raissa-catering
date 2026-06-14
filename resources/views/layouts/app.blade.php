@@ -50,9 +50,9 @@
 <nav class="bg-white shadow-sm sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-            <a href="{{ route('home') }}" class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                    <span class="text-white font-bold text-sm">R</span>
+            <a href="{{ route('home') }}" class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center overflow-hidden">
+                    <img src="{{ asset('images/raissa-catering.png') }}" alt="Raissa Catering" class="h-full w-full object-contain" />
                 </div>
                 <span class="font-display text-xl font-bold text-charcoal">Raissa <span class="text-primary">Catering</span></span>
             </a>
