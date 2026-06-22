@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Item;
 use App\Models\Package;
 use App\Models\PackageAddon;
 use Illuminate\Http\Request;
@@ -19,24 +20,36 @@ class PackageController extends Controller
 
     public function create()
     {
-        return view('admin.menus.create');
+        $items = Item::where('is_active', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.menus.create', compact('items'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'          => 'required|string|max:255',
-            'description'   => 'nullable|string',
-            'price_per_box' => 'required|numeric|min:1000',
-            'min_order'     => 'required|integer|min:1',
-            'event_type'    => 'required|in:pernikahan,ulang_tahun,meeting,syukuran,lainnya',
-            'menu_items'    => 'nullable|array',
-            'menu_items.*'  => 'string|max:100',
-            'image'         => 'nullable|image|max:2048',
-            'sort_order'    => 'nullable|integer',
-            'addons'        => 'nullable|array',
-            'addons.*.name' => 'required|string|max:100',
-            'addons.*.price'=> 'required|numeric|min:0',
+            'name'                => 'required|string|max:255',
+            'description'         => 'nullable|string',
+            'price_per_box'       => 'required|numeric|min:1000',
+            'min_order'           => 'required|integer|min:1',
+            'event_type'          => 'required|in:pernikahan,ulang_tahun,meeting,syukuran,lainnya',
+            'menu_items'          => 'nullable|array',
+            'menu_items.*'        => 'string|max:100',
+            'item_ids'            => 'nullable|array',
+            'item_ids.*'          => 'integer|exists:items,id',
+            'new_items'           => 'nullable|array',
+            'new_items.*.name'    => 'required_with:new_items|string|max:100',
+            'new_items.*.category'=> 'required_with:new_items|in:lauk,minuman,buah',
+            'new_items.*.additional_price' => 'nullable|numeric|min:0',
+            'new_items.*.description' => 'nullable|string|max:255',
+            'image'               => 'nullable|image|max:2048',
+            'sort_order'          => 'nullable|integer',
+            'addons'              => 'nullable|array',
+            'addons.*.name'       => 'required|string|max:100',
+            'addons.*.price'      => 'required|numeric|min:0',
         ]);
 
         $data['slug'] = Str::slug($request->name) . '-' . uniqid();
@@ -53,6 +66,8 @@ class PackageController extends Controller
             }
         }
 
+        $this->syncPackageItems($package, $data);
+
         return redirect()->route('admin.menus.index')->with('success', 'Paket berhasil ditambahkan.');
     }
 
@@ -62,9 +77,14 @@ class PackageController extends Controller
     public function edit($id)
     {
         $package = Package::findOrFail($id);
-        $package->load('addons');
-        
-        return view('admin.menus.edit', compact('package'));
+        $package->load('addons', 'items');
+
+        $items = Item::where('is_active', true)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.menus.edit', compact('package', 'items'));
     }
 
     /**
@@ -81,6 +101,14 @@ class PackageController extends Controller
             'min_order'     => 'required|integer|min:1',
             'event_type'    => 'required|in:pernikahan,ulang_tahun,meeting,syukuran,lainnya',
             'menu_items'    => 'nullable|array',
+            'menu_items.*'  => 'string|max:100',
+            'item_ids'      => 'nullable|array',
+            'item_ids.*'    => 'integer|exists:items,id',
+            'new_items'     => 'nullable|array',
+            'new_items.*.name'    => 'required_with:new_items|string|max:100',
+            'new_items.*.category'=> 'required_with:new_items|in:lauk,minuman,buah',
+            'new_items.*.additional_price' => 'nullable|numeric|min:0',
+            'new_items.*.description' => 'nullable|string|max:255',
             'image'         => 'nullable|image|max:2048',
             'remove_image'  => 'nullable|boolean',
             'sort_order'    => 'nullable|integer',
@@ -102,6 +130,7 @@ class PackageController extends Controller
         }
 
         $package->update($data);
+        $this->syncPackageItems($package, $data);
 
         return redirect()->route('admin.menus.index')->with('success', 'Paket berhasil diperbarui.');
     }
@@ -134,5 +163,30 @@ class PackageController extends Controller
         $package->update(['is_active' => !$package->is_active]);
         
         return back()->with('success', 'Status paket diperbarui.');
+    }
+
+    protected function syncPackageItems(Package $package, array $data): void
+    {
+        $itemIds = $data['item_ids'] ?? [];
+
+        if (! empty($data['new_items'])) {
+            foreach ($data['new_items'] as $newItem) {
+                if (empty($newItem['name']) || empty($newItem['category'])) {
+                    continue;
+                }
+
+                $createdItem = Item::create([
+                    'name'             => $newItem['name'],
+                    'category'         => $newItem['category'],
+                    'additional_price' => $newItem['additional_price'] ?? 0,
+                    'description'      => $newItem['description'] ?? null,
+                    'is_active'        => true,
+                ]);
+
+                $itemIds[] = $createdItem->id;
+            }
+        }
+
+        $package->items()->sync(array_values(array_filter($itemIds, fn($id) => is_numeric($id))));
     }
 }

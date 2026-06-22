@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Package extends Model
 {
@@ -20,6 +21,7 @@ class Package extends Model
     public function addons(): HasMany  { return $this->hasMany(PackageAddon::class); }
     public function orders(): HasMany  { return $this->hasMany(Order::class); }
     public function reviews(): HasMany { return $this->hasMany(Review::class); }
+    public function items(): BelongsToMany { return $this->belongsToMany(Item::class, 'item_package'); }
 
     public function getImageUrlAttribute(): string {
         return $this->image

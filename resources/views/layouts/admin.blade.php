@@ -24,6 +24,18 @@
         }
     </script>
     <style>body{font-family:'Plus Jakarta Sans',sans-serif;}.card{@apply bg-white rounded-xl shadow-sm border border-gray-100;}</style>
+    <style>
+        @media print {
+            body { background: #fff !important; color: #000 !important; }
+            aside, header, .no-print { display: none !important; }
+            .ml-64 { margin-left: 0 !important; }
+            .print-fullwidth { margin: 0 !important; width: auto !important; }
+            .bg-gray-50, .bg-white, .bg-primary, .bg-orange-50, .bg-orange-100, .bg-gray-100 { background: #fff !important; }
+            .border, .border-b, .border-t, .border-gray-200, .border-gray-100, .border-orange-100, .border-white\/10 { border: none !important; }
+            a { color: #000 !important; text-decoration: none !important; }
+            * { box-shadow: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex">
 

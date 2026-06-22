@@ -52,10 +52,14 @@
                         @endif
                     </div>
 
-                    <div class="mt-4">
+                    <div class="mt-4 grid gap-3">
                         <a href="{{ route('customer.checkout', ['package' => $package->slug]) }}" 
                            class="block w-full text-center bg-orange-500 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors shadow-sm shadow-orange-100">
                             Pilih Paket
+                        </a>
+                        <a href="{{ route('customer.checkout', ['package' => $package->slug, 'custom' => 1]) }}" 
+                           class="block w-full text-center bg-white text-orange-600 border border-orange-200 py-2.5 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors shadow-sm">
+                            Permintaan Custom
                         </a>
                     </div>
                 </div>

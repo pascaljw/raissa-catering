@@ -12,8 +12,11 @@ use Illuminate\Support\Facades\Route;
 // ============================================================
 Route::get('/', function () {
     $packages = \App\Models\Package::active()->with('reviews')->get();
-    $reviews  = \App\Models\Review::where('is_approved', true)->with('user','package')->latest()->take(6)->get();
-    return view('customer.home.index', compact('packages', 'reviews'));
+    $reviews  = \App\Models\Review::where('is_approved', true)->with('user','package')->latest()->take(3)->get();
+    $averageRating = \App\Models\Review::where('is_approved', true)->avg('rating') ?: 0;
+    $reviewCount = \App\Models\Review::where('is_approved', true)->count();
+
+    return view('customer.home.index', compact('packages', 'reviews', 'averageRating', 'reviewCount'));
 })->name('home');
 
 Route::get('/tentang', function () {
@@ -31,6 +34,7 @@ Route::get('/tentang', function () {
 // Rute daftar paket publik (Diakses oleh user/guest)
 Route::get('/paket', [CustomerOrderController::class, 'packages'])->name('packages.index');
 Route::get('/paket/{package:slug}', [CustomerOrderController::class, 'packageDetail'])->name('packages.show');
+Route::get('/reviews/summary', [CustomerOrderController::class, 'reviewSummary'])->name('reviews.summary');
 
 // Webhook Xendit Staging & Production (Bypass CSRF Token)
 Route::post('/webhook/xendit', [WebhookController::class, 'xendit'])
@@ -47,6 +51,8 @@ Route::middleware(['auth', 'verified'])->prefix('customer')->name('customer.')->
     Route::post('/orders', [CustomerOrderController::class, 'store'])->name('orders.store');
     Route::get('/orders', [CustomerOrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{orderNumber}', [CustomerOrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{orderNumber}/review', [CustomerOrderController::class, 'review'])->name('orders.review');
+    Route::post('/orders/{orderNumber}/review', [CustomerOrderController::class, 'submitReview'])->name('orders.submit-review');
 
     // Alur Pembayaran Gateway
     Route::post('/orders/{order}/pay-dp', [CustomerOrderController::class, 'payDp'])->name('orders.pay-dp');

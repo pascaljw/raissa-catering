@@ -98,6 +98,71 @@
             </button>
         </div>
 
+        <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm space-y-3">
+            <h2 class="font-semibold text-charcoal border-b pb-2">Pilihan Menu Kustom Paket</h2>
+            <p class="text-xs text-gray-400 mb-3">Centang item yang dapat dipilih pelanggan saat menggunakan fitur permintaan custom.</p>
+
+            <div class="grid gap-4 lg:grid-cols-3">
+                @foreach(['lauk' => 'Lauk', 'minuman' => 'Minuman', 'buah' => 'Buah'] as $category => $label)
+                    <div class="rounded-3xl border border-gray-200 p-4 bg-gray-50">
+                        <h3 class="font-semibold text-sm text-charcoal mb-3">{{ $label }}</h3>
+                        <div class="space-y-2">
+                            @forelse($items->where('category', $category) as $item)
+                                <label class="flex items-start gap-2 rounded-2xl border border-gray-200 bg-white p-3 cursor-pointer hover:border-orange-300">
+                                    <input type="checkbox" name="item_ids[]" value="{{ $item->id }}"
+                                        class="mt-1 h-4 w-4 text-orange-500 rounded border-gray-300 focus:ring-orange-500"
+                                        {{ in_array($item->id, old('item_ids', $package->items->pluck('id')->toArray())) ? 'checked' : '' }}>
+                                    <div class="text-sm">
+                                        <div class="font-medium text-gray-800">{{ $item->name }}</div>
+                                        <div class="text-xs text-gray-500">{{ $item->description }}</div>
+                                        @if($item->additional_price > 0)
+                                            <div class="text-xs text-orange-600 mt-1">+ Rp {{ number_format($item->additional_price, 0, ',', '.') }}</div>
+                                        @endif
+                                    </div>
+                                </label>
+                            @empty
+                                <p class="text-xs text-gray-500">Belum ada item {{ strtolower($label) }} aktif.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-4 border-t border-gray-200 pt-4">
+                <h3 class="font-semibold text-sm text-charcoal mb-3">Tambah Pilihan Kustom Baru</h3>
+                <div id="new-items-list" class="space-y-3">
+                    @if(old('new_items'))
+                        @foreach(old('new_items') as $index => $newItem)
+                            <div class="new-item-row grid grid-cols-1 gap-2 lg:grid-cols-[1fr,120px,120px,80px] items-end rounded-2xl border border-gray-200 p-4 bg-white">
+                                <div class="min-w-0">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Nama Item</label>
+                                    <input type="text" name="new_items[{{ $index }}][name]" value="{{ $newItem['name'] }}"
+                                        class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Contoh: Ayam Bakar" required>
+                                </div>
+                                <div class="min-w-0">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Kategori</label>
+                                    <select name="new_items[{{ $index }}][category]" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                                        @foreach(['lauk'=>'Lauk','minuman'=>'Minuman','buah'=>'Buah'] as $val => $label)
+                                            <option value="{{ $val }}" {{ ($newItem['category'] ?? '') === $val ? 'selected' : '' }}>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="min-w-0">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Biaya Tambahan</label>
+                                    <input type="number" step="0.01" name="new_items[{{ $index }}][additional_price]" value="{{ $newItem['additional_price'] ?? '' }}"
+                                        class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0">
+                                </div>
+                                <button type="button" onclick="this.closest('.new-item-row').remove()" class="mt-6 inline-flex items-center justify-center rounded-lg bg-red-100 text-red-600 px-3 py-2 text-sm font-semibold hover:bg-red-200">Hapus</button>
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+                <button type="button" onclick="addNewItemRow()" class="inline-flex items-center gap-2 text-orange-600 text-sm font-semibold hover:text-orange-700 hover:underline">
+                    + Tambah pilihan kustom baru
+                </button>
+            </div>
+        </div>
+
         <div class="flex gap-3">
             <button type="submit" class="bg-orange-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-orange-600 transition-colors shadow-sm text-sm">
                 Simpan Perubahan
@@ -117,6 +182,33 @@
                 <input type="text" name="menu_items[]" placeholder="Contoh: Es Teh Manis..."
                     class="flex-1 bg-white border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500" required>
                 <button type="button" onclick="this.parentElement.remove()" class="bg-red-100 text-red-500 px-3 py-2 rounded-lg text-sm font-bold hover:bg-red-200 transition-colors">×</button>
+            </div>
+        `);
+    }
+
+    function addNewItemRow() {
+        const container = document.getElementById('new-items-list');
+        const index = container.children.length;
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="new-item-row grid grid-cols-1 gap-2 lg:grid-cols-[1fr,120px,120px,80px] items-end rounded-2xl border border-gray-200 p-4 bg-white">
+                <div class="min-w-0">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nama Item</label>
+                    <input type="text" name="new_items[${index}][name]" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Contoh: Ayam Bakar" required>
+                </div>
+                <div class="min-w-0">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Kategori</label>
+                    <select name="new_items[${index}][category]" class="w-full border rounded-lg px-3 py-2 text-sm" required>
+                        <option value="lauk">Lauk</option>
+                        <option value="minuman">Minuman</option>
+                        <option value="buah">Buah</option>
+                    </select>
+                </div>
+                <div class="min-w-0">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Biaya Tambahan</label>
+                    <input type="number" step="0.01" name="new_items[${index}][additional_price]" class="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0">
+                </div>
+                <button type="button" onclick="this.closest('.new-item-row').remove()" class="mt-6 inline-flex items-center justify-center rounded-lg bg-red-100 text-red-600 px-3 py-2 text-sm font-semibold hover:bg-red-200">Hapus</button>
             </div>
         `);
     }

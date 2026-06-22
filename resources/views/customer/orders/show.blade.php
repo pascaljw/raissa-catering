@@ -193,6 +193,26 @@
                 @endif
             </div>
 
+            {{-- Tautan Review & Status Ulasan --}}
+            @if($order->status === 'completed')
+                @if($order->review)
+                    <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                        <h2 class="font-semibold text-charcoal mb-4 text-base border-b border-gray-50 pb-2">Review Anda</h2>
+                        <div class="flex items-center gap-2 mb-3 text-yellow-400 text-lg">
+                            @for($i=0; $i < $order->review->rating; $i++) ⭐ @endfor
+                        </div>
+                        <p class="text-sm text-gray-600 mb-4">"{{ $order->review->comment }}"</p>
+                        <p class="text-xs text-gray-500">Terima kasih telah memberi feedback. Review Anda membantu kami meningkatkan layanan.</p>
+                    </div>
+                @else
+                    <div class="bg-orange-50/70 border border-orange-100 rounded-xl p-6 shadow-sm">
+                        <h2 class="font-semibold text-charcoal mb-2">Pesanan selesai!</h2>
+                        <p class="text-sm text-gray-600 mb-4">Berikan rating dan komentar agar kami terus meningkatkan layanan Raissa Catering.</p>
+                        <a href="{{ route('customer.orders.review', $order->order_number) }}" class="inline-flex items-center justify-center w-full bg-orange-500 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-orange-600 transition">Beri Review Sekarang</a>
+                    </div>
+                @endif
+            @endif
+
             {{-- Tautan Kontak Bantuan Bawaan Toko --}}
             <a href="https://wa.me/628123456789?text=Halo%20Raissa%20Catering,%20saya%20ingin%20bertanya%20mengenai%20perkembangan%20antrean%20Pesanan%20%23{{ $order->order_number }}"
                target="_blank"

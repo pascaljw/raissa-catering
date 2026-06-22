@@ -7,9 +7,12 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithStyles
+class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithStyles, WithColumnFormatting, ShouldAutoSize
 {
     /**
      * Ambil data pesanan katering dari database
@@ -32,6 +35,7 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithSty
             'Paket Menu Katering',
             'Jumlah (Box)',
             'Total Tagihan (Rp)',
+            'Total Pendapatan (Rp)',
             'Status Pembayaran',
             'Status Operasional'
         ];
@@ -48,16 +52,31 @@ class OrdersExport implements FromCollection, WithHeadings, WithMapping, WithSty
             default      => 'Belum Bayar',
         };
 
+        $revenue = $order->payments->where('status', 'paid')->sum('amount');
+
         return [
             '#' . $order->order_number,
             $order->event_date ? \Carbon\Carbon::parse($order->event_date)->format('d-m-Y') : '-',
             $order->contact_name ?? ($order->user->name ?? '-'),
             $order->contact_phone ?? '-',
             $order->package->name ?? 'Paket Kustom',
-            $order->quantity . ' Box',
+            $order->quantity,
             $order->total_amount,
+            $revenue,
             $paymentStatus,
             strtoupper($order->status)
+        ];
+    }
+
+    /**
+     * Format kolom agar angka tampil rapi di Excel
+     */
+    public function columnFormats(): array
+    {
+        return [
+            'F' => NumberFormat::FORMAT_NUMBER,
+            'G' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
+            'H' => NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1,
         ];
     }
 
