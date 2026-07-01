@@ -14,7 +14,8 @@ class Order extends Model
         'price_per_box','subtotal','addon_total','total_amount',
         'dp_amount','remaining_amount','event_name','event_location',
         'event_address','event_date','delivery_time','notes','status',
-        'payment_status','selected_addons','contact_name','contact_phone',
+        'payment_status','payment_scheme','confirmed_at','confirmed_by',
+        'admin_confirmation_notes','selected_addons','contact_name','contact_phone',
         'is_custom','custom_request',
     ];
 
@@ -26,6 +27,7 @@ class Order extends Model
         'dp_amount'       => 'decimal:2',
         'remaining_amount'=> 'decimal:2',
         'is_custom'       => 'boolean',
+        'confirmed_at'    => 'datetime',
     ];
 
     // Relasi
@@ -34,6 +36,7 @@ class Order extends Model
     public function payments(): HasMany  { return $this->hasMany(Payment::class); }
     public function lineItems(): HasMany { return $this->hasMany(OrderLineItem::class); }
     public function review(): HasOne     { return $this->hasOne(Review::class); }
+    public function confirmedByUser(): BelongsTo { return $this->belongsTo(User::class, 'confirmed_by'); }
 
     // Helpers
     public function getDpPaymentAttribute()   { return $this->payments()->where('type','dp')->latest()->first(); }
@@ -41,9 +44,9 @@ class Order extends Model
 
     public function getStatusLabelAttribute(): string {
         return match($this->status) {
-            'pending'    => 'Menunggu DP',
+            'pending'    => 'Menunggu Konfirmasi',
             'dp_paid'    => 'DP Dibayar',
-            'confirmed'  => 'Dikonfirmasi',
+            'confirmed'  => 'Dikonfirmasi — Menunggu Pembayaran',
             'processing' => 'Diproses',
             'delivering' => 'Sedang Dikirim',
             'delivered'  => 'Sudah Sampai',
@@ -73,6 +76,16 @@ class Order extends Model
 
     public function canPayFull(): bool {
         return $this->status === 'delivered' && $this->payment_status === 'dp_paid';
+    }
+
+    /** Pesanan sudah dikonfirmasi admin? */
+    public function isConfirmed(): bool {
+        return $this->confirmed_at !== null;
+    }
+
+    /** Pesanan masih butuh konfirmasi admin? */
+    public function needsConfirmation(): bool {
+        return $this->status === 'pending' && $this->payment_status === 'unpaid' && !$this->isConfirmed();
     }
 
     // Generate nomor order: RC-YYYYMMDD-0001

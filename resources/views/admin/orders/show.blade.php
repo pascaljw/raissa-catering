@@ -17,10 +17,12 @@
                         @case('delivering') bg-orange-50 text-orange-700 border-orange-200 @break
                         @case('dp_paid') bg-blue-50 text-blue-700 border-blue-200 @break
                         @case('processing') bg-blue-50 text-blue-700 border-blue-200 @break
+                        @case('confirmed') bg-indigo-50 text-indigo-700 border-indigo-200 @break
                         @default bg-amber-50 text-amber-700 border-amber-200
                     @endswitch
                 ">
-                    @if($order->status == 'pending') Menunggu Pembayaran DP
+                    @if($order->status == 'pending') Menunggu Konfirmasi Admin
+                    @elseif($order->status == 'confirmed') Dikonfirmasi — Menunggu Pembayaran
                     @elseif($order->status == 'dp_paid' || $order->status == 'processing') Diproses (DP Lunas)
                     @elseif($order->status == 'completed') Selesai
                     @else {{ strtoupper($order->status) }} @endif
@@ -136,6 +138,107 @@
 
         <div class="space-y-6">
             
+            {{-- PANEL KONFIRMASI PESANAN BARU (Hanya tampil saat pesanan belum dikonfirmasi admin) --}}
+            @if($order->needsConfirmation())
+            <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 rounded-xl border-2 border-indigo-200 shadow-lg p-6 no-print relative overflow-hidden">
+                {{-- Decorative accent --}}
+                <div class="absolute top-0 right-0 w-20 h-20 bg-indigo-100/50 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                <div class="absolute bottom-0 left-0 w-14 h-14 bg-purple-100/50 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+                
+                <div class="relative">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xl">📋</span>
+                        <h2 class="text-base font-bold text-indigo-900">Konfirmasi Pesanan</h2>
+                    </div>
+                    <p class="text-xs text-indigo-600/70 mb-4 leading-relaxed">Tinjau pesanan dan tentukan skema pembayaran untuk pelanggan.</p>
+                    
+                    <form action="{{ route('admin.orders.confirm', $order->id) }}" method="POST" id="confirmOrderForm">
+                        @csrf
+                        
+                        {{-- Pilihan Skema Pembayaran --}}
+                        <div class="space-y-2.5 mb-4">
+                            <label class="block text-xs font-bold text-indigo-800 uppercase tracking-wider">Skema Pembayaran</label>
+                            
+                            {{-- Opsi DP 50% --}}
+                            <label class="group relative flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 bg-white border-gray-200 hover:border-indigo-300 hover:shadow-md has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/60 has-[:checked]:shadow-md">
+                                <input type="radio" name="payment_scheme" value="dp" checked class="mt-0.5 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0">
+                                <div class="flex-1">
+                                    <p class="font-bold text-sm text-gray-900">Uang Muka (DP 50%)</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Pelanggan bayar setengah dulu, sisa dilunasi nanti.</p>
+                                    <div class="mt-2 flex items-baseline gap-1.5">
+                                        <span class="text-lg font-extrabold text-indigo-600">Rp {{ number_format($order->dp_amount, 0, ',', '.') }}</span>
+                                        <span class="text-[10px] text-gray-400 font-medium">dari Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            {{-- Opsi Bayar Lunas --}}
+                            <label class="group relative flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all duration-200 bg-white border-gray-200 hover:border-emerald-300 hover:shadow-md has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50/60 has-[:checked]:shadow-md">
+                                <input type="radio" name="payment_scheme" value="full" class="mt-0.5 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0">
+                                <div class="flex-1">
+                                    <p class="font-bold text-sm text-gray-900">Bayar Lunas (100%)</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Pelanggan langsung melunasi seluruh tagihan.</p>
+                                    <div class="mt-2 flex items-baseline gap-1.5">
+                                        <span class="text-lg font-extrabold text-emerald-600">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                                        <span class="text-[10px] text-gray-400 font-medium">bayar penuh</span>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        {{-- Catatan Admin --}}
+                        <div class="mb-4">
+                            <label class="block text-xs font-bold text-indigo-800 uppercase tracking-wider mb-1.5">Catatan (Opsional)</label>
+                            <textarea name="admin_confirmation_notes" rows="2" placeholder="Contoh: Pelanggan VIP, kasih diskon pengiriman..." 
+                                class="w-full text-sm border-indigo-200 rounded-lg focus:border-indigo-500 focus:ring-indigo-500 placeholder:text-gray-400 bg-white/80 resize-none"></textarea>
+                        </div>
+                        
+                        {{-- Tombol Konfirmasi --}}
+                        <button type="submit" onclick="return confirm('Konfirmasi pesanan ini? Pelanggan akan menerima notifikasi untuk melakukan pembayaran.')"
+                            class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white font-bold py-3 rounded-xl text-sm transition-all duration-200 shadow-lg shadow-indigo-200/50 hover:shadow-indigo-300/50 hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Konfirmasi Pesanan
+                        </button>
+                    </form>
+                </div>
+            </div>
+            @endif
+
+            {{-- Info Konfirmasi yang Sudah Dilakukan --}}
+            @if($order->isConfirmed())
+            <div class="bg-white rounded-xl border border-gray-200/60 shadow-sm p-6">
+                <h2 class="text-base font-bold text-gray-900 mb-3 pb-2 border-b border-gray-100 flex items-center gap-2">
+                    <span class="text-green-500">✓</span> Dikonfirmasi
+                </h2>
+                <div class="space-y-2.5 text-sm">
+                    <div>
+                        <span class="text-gray-400 text-xs block">Skema Pembayaran</span>
+                        <span class="font-semibold text-gray-800 mt-0.5 block">
+                            @if($order->payment_scheme === 'dp')
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold border border-indigo-100">💳 DP 50%</span>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">💰 Bayar Lunas</span>
+                            @endif
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-xs block">Dikonfirmasi Oleh</span>
+                        <span class="font-semibold text-gray-800 mt-0.5 block">{{ $order->confirmedByUser->name ?? 'Admin' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-xs block">Waktu Konfirmasi</span>
+                        <span class="font-semibold text-gray-800 mt-0.5 block">{{ $order->confirmed_at->format('d M Y, H:i') }} WITA</span>
+                    </div>
+                    @if($order->admin_confirmation_notes)
+                    <div>
+                        <span class="text-gray-400 text-xs block">Catatan Admin</span>
+                        <p class="text-sm font-medium text-gray-700 bg-gray-50 p-2.5 rounded-lg border border-gray-100 mt-1">{{ $order->admin_confirmation_notes }}</p>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            @endif
+
             {{-- Form Update Status Manajemen Dapur/Kurir --}}
             <div class="bg-white rounded-xl border border-gray-200/60 shadow-sm p-6 no-print">
                 <h2 class="text-base font-bold text-gray-900 mb-3 pb-1">⚙️ Update Status Alur Pesanan</h2>
@@ -145,7 +248,8 @@
                     @method('PATCH')
                     <div>
                         <select name="status" {{ $isFinalStatus ? 'disabled' : '' }} class="w-full text-sm border-gray-200 rounded-lg shadow-sm focus:border-orange-500 focus:ring-orange-500 {{ $isFinalStatus ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : '' }}">
-                            <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>Menunggu Pembayaran</option>
+                            <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>Menunggu Konfirmasi</option>
+                            <option value="confirmed" {{ $order->status == 'confirmed' ? 'selected' : '' }}>Dikonfirmasi (Menunggu Bayar)</option>
                             <option value="processing" {{ $order->status == 'processing' || $order->status == 'dp_paid' ? 'selected' : '' }}>Diproses (Dapur Produksi)</option>
                             <option value="delivering" {{ $order->status == 'delivering' ? 'selected' : '' }}>Kurir Sedang Mengantar</option>
                             <option value="completed" {{ $order->status == 'completed' ? 'selected' : '' }}>Selesai / Tiba di Lokasi</option>
@@ -175,8 +279,15 @@
                     </div>
                     
                     <div class="bg-gray-50 rounded-lg p-3 space-y-1.5 border border-gray-100 mt-2">
+                        @if($order->payment_scheme === 'full')
+                        <div class="flex justify-between text-xs text-gray-600">
+                            <span>Skema: Bayar Lunas</span>
+                            <span class="font-semibold text-emerald-700">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                        </div>
+                        @else
                         <div class="flex justify-between text-xs text-gray-600"><span>Uang Muka (DP 50%)</span><span class="font-semibold text-gray-800">Rp {{ number_format($order->dp_amount, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between text-xs text-gray-600"><span>Sisa Pelunasan</span><span class="font-semibold text-orange-600">Rp {{ number_format($order->remaining_amount, 0, ',', '.') }}</span></div>
+                        @endif
                         <div class="flex justify-between text-xs text-gray-600 border-t border-gray-200/60 pt-1.5">
                             <span>Status Bayar</span>
                             <span class="font-bold uppercase tracking-wider text-[10px] 

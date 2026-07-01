@@ -61,11 +61,14 @@
                                 'completed'  => 'bg-green-100 text-green-700',
                                 'cancelled'  => 'bg-red-100 text-red-700',
                                 'delivering' => 'bg-orange-100 text-orange-700',
-                                'confirmed'  => 'bg-blue-100 text-blue-700',
+                                'confirmed'  => 'bg-indigo-100 text-indigo-700',
                                 default      => 'bg-yellow-100 text-yellow-700',
                             } }}">
                             {{ $order->status_label }}
                         </span>
+                        @if($order->needsConfirmation())
+                        <span class="block mt-1 text-[10px] font-bold text-red-600 uppercase tracking-wider animate-pulse">⚠ Perlu Konfirmasi</span>
+                        @endif
                     </td>
                     <td class="px-4 py-3 text-center">
                         <span class="px-2 py-1 rounded-full text-xs font-medium

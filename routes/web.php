@@ -78,6 +78,7 @@ Route::middleware(['auth', \App\Http\Middleware\AdminMiddleware::class])
     Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
     Route::post('/orders/{order}/confirm-cash', [AdminOrderController::class, 'confirmCash'])->name('orders.confirm-cash');
+    Route::post('/orders/{order}/confirm', [AdminOrderController::class, 'confirm'])->name('orders.confirm');
 
     // Manajemen CRUD Paket / Menu (Menggunakan Resource Controller)
     Route::resource('menus', AdminPackageController::class);

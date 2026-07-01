@@ -17,11 +17,13 @@
                 @case('delivering') bg-orange-100 text-orange-700 @break
                 @case('dp_paid') bg-blue-100 text-blue-700 @break
                 @case('processing') bg-blue-100 text-blue-700 @break
+                @case('confirmed') bg-indigo-100 text-indigo-700 @break
                 @default bg-amber-100 text-amber-700
             @endswitch
         ">
             {{-- Menampilkan label status pesanan --}}
-            @if($order->status == 'pending') Menunggu Pembayaran
+            @if($order->status == 'pending') Menunggu Konfirmasi
+            @elseif($order->status == 'confirmed') Dikonfirmasi — Menunggu Pembayaran
             @elseif($order->status == 'dp_paid' || $order->status == 'processing') Diproses (DP Lunas)
             @elseif($order->status == 'completed') Selesai
             @else {{ $order->status }} @endif
@@ -107,8 +109,12 @@
                     </div>
                     
                     <div class="bg-amber-50/70 rounded-lg p-3 mt-3 border border-amber-100/50 space-y-1.5">
+                        @if($order->payment_scheme === 'full')
+                        <div class="flex justify-between text-xs font-medium text-emerald-800"><span>Skema: Bayar Lunas (100%)</span><span>Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span></div>
+                        @else
                         <div class="flex justify-between text-xs font-medium text-amber-800"><span>Wajib Uang Muka (DP 50%)</span><span>Rp {{ number_format($order->dp_amount, 0, ',', '.') }}</span></div>
                         <div class="flex justify-between text-xs font-medium text-gray-600 border-t border-amber-200/40 pt-1.5"><span>Sisa Pelunasan Selesai</span><span>Rp {{ number_format($order->remaining_amount, 0, ',', '.') }}</span></div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -122,10 +128,27 @@
                 $fullInvoiceUrl = $fullPayment ? ($fullPayment->xendit_response['invoice_url'] ?? null) : null;
             @endphp
 
-            {{-- TAHAP 1: Jika Pembayaran Masih Kosong / Menunggu DP --}}
-                @if($order->payment_status === 'unpaid' && $order->status === 'pending')
+            {{-- TAHAP 0: Pesanan Menunggu Konfirmasi Admin --}}
+                @if($order->status === 'pending' && !$order->isConfirmed())
+                <div class="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-5 text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 animate-pulse"></div>
+                    <div class="text-3xl mb-2">⏳</div>
+                    <h3 class="font-bold text-amber-900 text-sm">Menunggu Konfirmasi Admin</h3>
+                    <p class="text-xs text-amber-700/80 mt-1.5 leading-relaxed">Pesanan Anda sedang ditinjau oleh tim kami. Anda akan menerima notifikasi dan dapat melakukan pembayaran setelah pesanan dikonfirmasi.</p>
+                    <div class="mt-3 flex items-center justify-center gap-1.5">
+                        <span class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                        <span class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                    </div>
+                </div>
+
+            {{-- TAHAP 1: Dikonfirmasi — Skema DP — Belum Bayar --}}
+                @elseif(($order->status === 'confirmed' && $order->payment_status === 'unpaid' && $order->payment_scheme === 'dp'))
                 <div class="bg-orange-50/50 border border-orange-100 rounded-xl p-4 text-center">
-                    <p class="text-xs text-gray-600 mb-3 leading-relaxed">Konfirmasi pesanan katering Anda secara instan dengan membayar uang muka.</p>
+                    <div class="mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-bold border border-indigo-100 uppercase tracking-wider">✓ Pesanan Dikonfirmasi</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-3 leading-relaxed">Pesanan dikonfirmasi! Silakan bayar uang muka (DP 50%) untuk memulai proses katering.</p>
                     
                     <form action="{{ route('customer.orders.pay-dp', $order->order_number) }}" method="POST">
                         @csrf
@@ -133,10 +156,25 @@
                             💳 Bayar DP Rp {{ number_format($order->dp_amount, 0, ',', '.') }}
                         </button>
                     </form>
-
                 </div>
 
-                {{-- TAHAP 1.5: Jika Invoice DP sudah dibuat dan menunggu pembayaran --}}
+            {{-- TAHAP 1-ALT: Dikonfirmasi — Skema FULL — Belum Bayar --}}
+                @elseif(($order->status === 'confirmed' && $order->payment_status === 'unpaid' && $order->payment_scheme === 'full'))
+                <div class="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 text-center">
+                    <div class="mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold border border-emerald-100 uppercase tracking-wider">✓ Pesanan Dikonfirmasi</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-3 leading-relaxed">Pesanan dikonfirmasi! Admin meminta pembayaran penuh langsung untuk pesanan ini.</p>
+                    
+                    <form action="{{ route('customer.orders.pay-full', $order->order_number) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm text-sm">
+                            💰 Bayar Lunas Rp {{ number_format($order->total_amount, 0, ',', '.') }}
+                        </button>
+                    </form>
+                </div>
+
+            {{-- TAHAP 1.5: Jika Invoice DP sudah dibuat dan menunggu pembayaran --}}
                 @elseif($order->payment_status === 'dp_pending')
                 <div class="bg-amber-50/50 border border-amber-100 rounded-xl p-4 text-center">
                     <p class="text-xs text-gray-600 mb-3 leading-relaxed">Tagihan DP Anda sudah dibuat dan menunggu pembayaran. Silakan selesaikan pembayaran melalui link berikut atau ulangi pembayaran jika invoice sudah kadaluarsa.</p>

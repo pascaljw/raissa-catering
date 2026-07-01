@@ -118,6 +118,46 @@ class OrderController extends Controller
     }
 
     /**
+     * POST /admin/orders/{order}/confirm
+     * Admin mengkonfirmasi pesanan dan memilih skema pembayaran: DP 50% atau Bayar Lunas
+     */
+    public function confirm(Request $request, Order $order)
+    {
+        // Hanya pesanan pending yang belum dikonfirmasi bisa dikonfirmasi
+        if ($order->status !== 'pending' || $order->payment_status !== 'unpaid') {
+            return back()->withErrors(['confirm' => 'Pesanan ini tidak dalam kondisi yang bisa dikonfirmasi.']);
+        }
+
+        if ($order->isConfirmed()) {
+            return back()->withErrors(['confirm' => 'Pesanan ini sudah dikonfirmasi sebelumnya.']);
+        }
+
+        $request->validate([
+            'payment_scheme' => 'required|in:dp,full',
+            'admin_confirmation_notes' => 'nullable|string|max:500',
+        ]);
+
+        $updateData = [
+            'status'                   => 'confirmed',
+            'payment_scheme'           => $request->payment_scheme,
+            'confirmed_at'             => now(),
+            'confirmed_by'             => auth()->id(),
+            'admin_confirmation_notes' => $request->admin_confirmation_notes,
+        ];
+
+        // Jika admin memilih bayar lunas, set remaining = total agar invoice full_payment benar
+        if ($request->payment_scheme === 'full') {
+            $updateData['dp_amount']        = 0;
+            $updateData['remaining_amount'] = $order->total_amount;
+        }
+
+        $order->update($updateData);
+
+        $schemeLabel = $request->payment_scheme === 'dp' ? 'Down Payment (DP 50%)' : 'Bayar Lunas (100%)';
+        return back()->with('success', "Pesanan berhasil dikonfirmasi dengan skema pembayaran: {$schemeLabel}");
+    }
+
+    /**
      * GET /admin/reports
      * Menampilkan halaman rekap laporan operasional & keuangan katering
      * Diarahkan ke folder jamak sesuai proyek Anda: resources/views/admin/reports/index.blade.php
