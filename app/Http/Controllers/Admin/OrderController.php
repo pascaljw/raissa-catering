@@ -78,20 +78,61 @@ class OrderController extends Controller
     {
         $request->validate(['notes' => 'nullable|string|max:500']);
 
-        // SKENARIO 1: Pelanggan membayar DP secara Tunai/Cash langsung (Bypass Xendit)
-        if ($order->status === 'pending' && $order->payment_status === 'unpaid') {
-            
-            // Catat data pembayaran DP ke database internal secara manual
+        // SKENARIO 1: Pesanan yang sudah dikonfirmasi admin (status = confirmed), pelanggan bayar tunai/manual
+        if ($order->status === 'confirmed' && $order->payment_status === 'unpaid') {
+
+            if ($order->payment_scheme === 'full') {
+                // Skema bayar lunas: langsung catat full payment
+                $order->payments()->create([
+                    'payment_reference' => 'CASH-FULL-' . $order->order_number . '-' . time(),
+                    'amount'            => $order->total_amount,
+                    'type'              => 'full_payment',
+                    'method'            => 'cash',
+                    'status'            => 'paid',
+                    'paid_at'           => now(),
+                    'admin_notes'       => $request->notes ?? 'Pembayaran lunas 100% dikonfirmasi manual oleh Admin.',
+                ]);
+
+                $order->update([
+                    'status'         => 'completed',
+                    'payment_status' => 'fully_paid',
+                ]);
+
+                return back()->with('success', 'Pembayaran lunas (100%) berhasil dikonfirmasi! Pesanan selesai.');
+            }
+
+            // Skema DP: catat pembayaran DP
             $order->payments()->create([
                 'payment_reference' => 'CASH-DP-' . $order->order_number . '-' . time(),
                 'amount'            => $order->dp_amount,
                 'type'              => 'dp',
+                'method'            => 'cash',
                 'status'            => 'paid',
                 'paid_at'           => now(),
-                'notes'             => $request->notes ?? 'Pembayaran DP 50% secara manual/tunai langsung ke Admin.',
+                'admin_notes'       => $request->notes ?? 'Pembayaran DP 50% dikonfirmasi manual oleh Admin.',
             ]);
 
-            // Alihkan status ke tahap produksi dapur katering karena DP sudah aman
+            $order->update([
+                'status'         => 'processing',
+                'payment_status' => 'dp_paid',
+            ]);
+
+            return back()->with('success', 'Konfirmasi DP berhasil! Pesanan dialihkan ke status diproses.');
+        }
+
+        // SKENARIO 1B: Pesanan pending lama (belum pakai flow konfirmasi baru)
+        if ($order->status === 'pending' && $order->payment_status === 'unpaid') {
+            
+            $order->payments()->create([
+                'payment_reference' => 'CASH-DP-' . $order->order_number . '-' . time(),
+                'amount'            => $order->dp_amount,
+                'type'              => 'dp',
+                'method'            => 'cash',
+                'status'            => 'paid',
+                'paid_at'           => now(),
+                'admin_notes'       => $request->notes ?? 'Pembayaran DP 50% secara manual/tunai langsung ke Admin.',
+            ]);
+
             $order->update([
                 'status'         => 'processing',
                 'payment_status' => 'dp_paid'
@@ -100,21 +141,42 @@ class OrderController extends Controller
             return back()->with('success', 'Konfirmasi DP Tunai sukses! Pesanan otomatis dialihkan ke status diproses.');
         }
 
-        // SKENARIO 2: Pelanggan membayar sisa pelunasan (COD) saat makanan katering tiba di lokasi acara
-        $allowedFullStatuses = ['processing', 'dp_paid', 'delivering', 'completed'];
+        // SKENARIO 2: Konfirmasi pembayaran online yang sudah masuk (dp_pending / full_pending dari Xendit)
+        if (in_array($order->payment_status, ['dp_pending', 'full_pending'])) {
+            $pendingPayment = $order->payments()->where('status', 'pending')->latest()->first();
+
+            if ($pendingPayment) {
+                $pendingPayment->update([
+                    'status'  => 'paid',
+                    'method'  => $pendingPayment->method ?? 'manual_transfer',
+                    'paid_at' => now(),
+                    'admin_notes' => $request->notes ?? 'Pembayaran dikonfirmasi manual oleh Admin (webhook tidak diterima).',
+                ]);
+
+                if ($pendingPayment->type === 'dp') {
+                    $order->update(['status' => 'processing', 'payment_status' => 'dp_paid']);
+                    return back()->with('success', 'Pembayaran DP berhasil dikonfirmasi manual!');
+                } else {
+                    $order->update(['status' => 'completed', 'payment_status' => 'fully_paid']);
+                    return back()->with('success', 'Pelunasan berhasil dikonfirmasi manual! Pesanan selesai.');
+                }
+            }
+        }
+
+        // SKENARIO 3: Pelanggan membayar sisa pelunasan (COD) saat makanan tiba
+        $allowedFullStatuses = ['processing', 'dp_paid', 'delivering', 'completed', 'confirmed'];
 
         if (in_array($order->status, $allowedFullStatuses)) {
             if ($order->payment_status === 'fully_paid') {
                 return back()->withErrors(['payment' => 'Pesanan katering ini sudah berstatus lunas total.']);
             }
 
-            // Panggil fungsi bawaan XenditService untuk mengunci pelunasan akhir secara cash di sistem
             $this->xendit->confirmCashPayment($order, $request->notes ?? 'Sisa pelunasan dibayar tunai via Kurir (COD)');
 
             return back()->with('success', 'Pelunasan akhir secara tunai (COD) berhasil dikonfirmasi.');
         }
 
-        return back()->withErrors(['payment' => 'Kondisi status pesanan saat ini tidak memenuhi syarat untuk konfirmasi tunai.']);
+        return back()->withErrors(['payment' => 'Kondisi status pesanan saat ini tidak memenuhi syarat untuk konfirmasi.']);
     }
 
     /**

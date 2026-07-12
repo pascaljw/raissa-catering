@@ -47,19 +47,35 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             @if($order->status == 'pending')
                                 <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 border border-amber-100">
+                                    Menunggu Konfirmasi
+                                </span>
+                            @elseif($order->status == 'confirmed')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 border border-indigo-100">
                                     Menunggu Pembayaran
                                 </span>
                             @elseif($order->status == 'processing' || $order->status == 'dp_paid')
                                 <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 border border-blue-100">
                                     Diproses (DP Lunas)
                                 </span>
+                            @elseif($order->status == 'delivering')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-700 border border-orange-100">
+                                    Sedang Dikirim
+                                </span>
+                            @elseif($order->status == 'delivered')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 border border-teal-100">
+                                    Sudah Sampai
+                                </span>
                             @elseif($order->status == 'completed')
                                 <span class="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 border border-green-100">
                                     Selesai
                                 </span>
+                            @elseif($order->status == 'cancelled')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-100">
+                                    Batal
+                                </span>
                             @else
                                 <span class="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-100">
-                                    Batal
+                                    {{ $order->status_label }}
                                 </span>
                             @endif
                         </td>

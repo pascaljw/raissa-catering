@@ -298,16 +298,26 @@
                     </div>
                 </div>
 
-                {{-- KONTROL PELUNASAN TUNAI (COD) OLEH ADMIN --}}
+                {{-- KONTROL KONFIRMASI PEMBAYARAN MANUAL OLEH ADMIN --}}
                 @if($order->payment_status !== 'fully_paid')
                 <div class="mt-5 pt-4 border-t border-gray-100 no-print">
-                    <p class="text-xs text-gray-500 mb-2 leading-relaxed">Jika kurir menerima uang pelunasan secara tunai (cash) di lokasi acara, konfirmasi di bawah ini:</p>
-                    <form action="{{ route('admin.orders.confirm-cash', $order->id) }}" method="POST" onsubmit="return confirm('Konfirmasi bahwa pesanan katering ini telah dilunasi secara tunai (Cash)?')">
-                        @csrf
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg text-xs transition-colors shadow-sm">
-                            💵 Konfirmasi Pelunasan Tunai (COD)
-                        </button>
-                    </form>
+                    @if(in_array($order->payment_status, ['dp_pending', 'full_pending']))
+                        <p class="text-xs text-amber-600 font-medium mb-2 leading-relaxed">⚡ Pelanggan sudah bayar via Xendit tapi webhook belum diterima? Konfirmasi manual di sini:</p>
+                        <form action="{{ route('admin.orders.confirm-cash', $order->id) }}" method="POST" onsubmit="return confirm('Konfirmasi bahwa pembayaran online pesanan ini sudah diterima?')">
+                            @csrf
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-xs transition-colors shadow-sm">
+                                ✓ Konfirmasi Pembayaran Manual
+                            </button>
+                        </form>
+                    @else
+                        <p class="text-xs text-gray-500 mb-2 leading-relaxed">Konfirmasi pembayaran tunai (cash) atau transfer manual dari pelanggan:</p>
+                        <form action="{{ route('admin.orders.confirm-cash', $order->id) }}" method="POST" onsubmit="return confirm('Konfirmasi bahwa pembayaran pesanan ini sudah diterima?')">
+                            @csrf
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg text-xs transition-colors shadow-sm">
+                                💵 Konfirmasi Pembayaran
+                            </button>
+                        </form>
+                    @endif
                 </div>
                 @endif
             </div>
