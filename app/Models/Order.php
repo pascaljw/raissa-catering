@@ -13,7 +13,7 @@ class Order extends Model
         'order_number','user_id','package_id','quantity',
         'price_per_box','subtotal','addon_total','total_amount',
         'dp_amount','remaining_amount','event_name','event_location',
-        'event_address','event_date','delivery_time','notes','status',
+        'event_address','kecamatan','kelurahan','event_date','delivery_time','notes','status',
         'payment_status','payment_scheme','confirmed_at','confirmed_by',
         'admin_confirmation_notes','selected_addons','contact_name','contact_phone',
         'is_custom','custom_request',

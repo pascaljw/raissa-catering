@@ -105,7 +105,12 @@
                     </div>
                     <div class="sm:col-span-2 border-t border-gray-50 pt-2">
                         <span class="text-gray-400 block text-xs uppercase tracking-wider">Alamat Lengkap Pengiriman</span>
-                        <span class="font-medium text-gray-800 mt-0.5 block leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">{{ $order->event_address }}</span>
+                        <span class="font-medium text-gray-800 mt-0.5 block leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            {{ $order->event_address }}<br>
+                            @if($order->kelurahan && $order->kecamatan)
+                            Kel. {{ $order->kelurahan }}, Kec. {{ $order->kecamatan }}, Samarinda
+                            @endif
+                        </span>
                     </div>
                     @if($order->notes)
                     <div class="sm:col-span-2">

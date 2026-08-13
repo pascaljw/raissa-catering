@@ -60,7 +60,15 @@
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">Tanggal Pengantaran</dt><dd class="font-medium text-charcoal mt-0.5">{{ \Carbon\Carbon::parse($order->event_date)->format('d M Y') }}</dd></div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">Lokasi / Gedung</dt><dd class="font-medium text-charcoal mt-0.5">{{ $order->event_location }}</dd></div>
                     <div><dt class="text-gray-400 text-xs uppercase tracking-wider">Waktu Kirim (Tiba)</dt><dd class="font-medium text-charcoal mt-0.5">Pukul {{ $order->delivery_time }} WITA</dd></div>
-                    <div class="sm:col-span-2"><dt class="text-gray-400 text-xs uppercase tracking-wider">Alamat Lengkap Tujuan</dt><dd class="font-medium text-charcoal mt-0.5 leading-relaxed">{{ $order->event_address }}</dd></div>
+                    <div class="sm:col-span-2">
+                        <dt class="text-gray-400 text-xs uppercase tracking-wider">Alamat Lengkap Tujuan</dt>
+                        <dd class="font-medium text-charcoal mt-0.5 leading-relaxed">
+                            {{ $order->event_address }}<br>
+                            @if($order->kelurahan && $order->kecamatan)
+                            Kel. {{ $order->kelurahan }}, Kec. {{ $order->kecamatan }}, Samarinda
+                            @endif
+                        </dd>
+                    </div>
                     @if($order->notes)
                     <div class="sm:col-span-2"><dt class="text-gray-400 text-xs uppercase tracking-wider">Catatan Khusus Pembeli</dt><dd class="font-medium text-orange-600 mt-0.5 bg-orange-50/50 p-2.5 rounded-lg border border-dashed border-orange-100">{{ $order->notes }}</dd></div>
                     @endif

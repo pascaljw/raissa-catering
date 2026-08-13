@@ -66,6 +66,25 @@
                         </div>
                     </div>
 
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="kecamatan" class="block text-sm font-semibold text-gray-700 mb-1.5">Kecamatan (Samarinda)</label>
+                            <select name="kecamatan" id="kecamatan" 
+                                    class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none text-sm transition-all"
+                                    required>
+                                <option value="" disabled selected>Pilih Kecamatan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="kelurahan" class="block text-sm font-semibold text-gray-700 mb-1.5">Kelurahan</label>
+                            <select name="kelurahan" id="kelurahan" 
+                                    class="w-full px-4 py-2.5 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none text-sm transition-all"
+                                    required disabled>
+                                <option value="" disabled selected>Pilih Kelurahan</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div>
                         <label for="address" class="block text-sm font-semibold text-gray-700 mb-1.5">Alamat Lengkap Tujuan Pengiriman</label>
                         <textarea name="address" id="address" rows="3" 
@@ -145,4 +164,69 @@
 
 {{-- Include Order Form Validator Script --}}
 @vite(['resources/js/order-form-validator.js'])
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const samarindaData = {
+            "Loa Janan Ilir": ["Harapan Baru", "Rapak Dalam", "Sengkotek", "Simpang Tiga", "Tani Aman"],
+            "Palaran": ["Bantuas", "Bukuan", "Handil Bakti", "Rawa Makmur", "Simpang Pasir"],
+            "Samarinda Ilir": ["Pelita", "Selili", "Sidodamai", "Sidomulyo", "Sungai Dama"],
+            "Samarinda Kota": ["Bugis", "Karang Mumus", "Pasar Pagi", "Pelabuhan", "Sungai Pinang Luar"],
+            "Samarinda Seberang": ["Baqa", "Gunung Panjang", "Mangkupalas", "Mesjid", "Sungai Keledang", "Tenun"],
+            "Samarinda Ulu": ["Air Hitam", "Air Putih", "Bukit Pinang", "Dadi Mulya", "Gunung Kelua", "Jawa", "Sidodadi", "Teluk Lerong Ilir"],
+            "Samarinda Utara": ["Budaya Pampang", "Lempake", "Sempaja Barat", "Sempaja Selatan", "Sempaja Timur", "Sempaja Utara", "Sungai Siring", "Tanah Merah"],
+            "Sambutan": ["Makroman", "Pulau Atas", "Sambutan", "Sindang Sari", "Sungai Kapih"],
+            "Sungai Kunjang": ["Loa Buah", "Loa Bakung", "Karang Anyar", "Karang Asam Ilir", "Karang Asam Ulu", "Teluk Lerong Ulu", "Lok Bahu"],
+            "Sungai Pinang": ["Bandara", "Gunung Lingai", "Mugirejo", "Sungai Pinang Dalam", "Temindung Permai"]
+        };
+
+        const kecamatanSelect = document.getElementById('kecamatan');
+        const kelurahanSelect = document.getElementById('kelurahan');
+
+        // Populate Kecamatan
+        Object.keys(samarindaData).sort().forEach(kecamatan => {
+            const option = document.createElement('option');
+            option.value = kecamatan;
+            option.textContent = kecamatan;
+            kecamatanSelect.appendChild(option);
+        });
+
+        // Handle Kecamatan Change
+        kecamatanSelect.addEventListener('change', function() {
+            const selectedKecamatan = this.value;
+            
+            // Clear existing options
+            kelurahanSelect.innerHTML = '<option value="" disabled selected>Pilih Kelurahan</option>';
+            
+            if (selectedKecamatan && samarindaData[selectedKecamatan]) {
+                // Enable Kelurahan select
+                kelurahanSelect.disabled = false;
+                
+                // Populate Kelurahan
+                samarindaData[selectedKecamatan].sort().forEach(kelurahan => {
+                    const option = document.createElement('option');
+                    option.value = kelurahan;
+                    option.textContent = kelurahan;
+                    kelurahanSelect.appendChild(option);
+                });
+            } else {
+                kelurahanSelect.disabled = true;
+            }
+        });
+        
+        // Retain old values if validation fails
+        const oldKecamatan = "{{ old('kecamatan') }}";
+        const oldKelurahan = "{{ old('kelurahan') }}";
+        
+        if (oldKecamatan) {
+            kecamatanSelect.value = oldKecamatan;
+            kecamatanSelect.dispatchEvent(new Event('change'));
+            
+            if (oldKelurahan) {
+                setTimeout(() => {
+                    kelurahanSelect.value = oldKelurahan;
+                }, 50);
+            }
+        }
+    });
+</script>
 @endsection
